@@ -1,0 +1,8 @@
+[package]
+name = "event-script"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+lazy-regex = "3.4.2"
+num-traits = "0.2.19"
