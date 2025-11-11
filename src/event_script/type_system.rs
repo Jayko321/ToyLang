@@ -38,7 +38,7 @@ impl Variable {
 enum SymbolType {
     Type(Type),
     Variable(Variable),
-    Function(Function),
+    // Function(Function),
     // Macro(String, Vec<T>),
 }
 
@@ -66,6 +66,8 @@ pub enum TypeErrors {
     TypeAlreadyExists(),
     FunctionAlreadyExists(),
     VariableAlreadyExists(),
+    OperationIsNotSupported(),
+    VariableDoesntExist(String),
     TypeNotFound(String),
     SymbolIsNotAType(String, String),
 }
@@ -84,7 +86,7 @@ impl Type {
 }
 
 impl TypeChecker {
-    pub fn new() -> Self {
+    fn new() -> Self {
         let mut res = TypeChecker {
             symbol_table: HashMap::new(),
         };
@@ -103,8 +105,13 @@ impl TypeChecker {
             checker
                 .symbol_table
                 .iter()
-                .filter(|(_, val)| { matches!(val, SymbolType::Variable(_)) })
-                .collect::<HashMap<&Key, &SymbolType>>()
+                .filter_map(|(_, val)| {
+                    if matches!(val, SymbolType::Variable(_)) {
+                        return Some(val);
+                    }
+                    None
+                })
+                .collect::<Vec<_>>()
         );
         Ok(())
     }
@@ -113,8 +120,7 @@ impl TypeChecker {
         match statement {
             Statement::Block(statements) => {
                 for statement in statements {
-                    let _depth = depth + 1;
-                    self.populate_table(statement, _depth + 1)?;
+                    self.populate_table(statement, depth + 1)?;
                 }
                 Ok(())
             }
@@ -136,16 +142,20 @@ impl TypeChecker {
                     }
                 }
                 if let Some(expr) = expression {
-                    _type = Some(self.solve_expression_type(expr)?);
+                    _type = Some(self.solve_expression_type(expr, depth)?);
                 }
-                self.add_variable(name, is_const, true, _type)?;
+                self.add_variable(name, is_const, true, _type, depth)?;
                 Ok(())
             }
             _ => Ok(()),
         }
     }
-    fn check_type_correctness(&mut self) {}
-    fn solve_expression_type(&mut self, expression: Expression) -> Result<Type, TypeErrors> {
+    // fn check_type_correctness(&mut self) {}
+    fn solve_expression_type(
+        &mut self,
+        expression: Expression,
+        depth: u16,
+    ) -> Result<Type, TypeErrors> {
         match expression {
             Expression::String(_) => todo!(),
             Expression::Number(value) => {
@@ -177,7 +187,7 @@ impl TypeChecker {
                     .symbol_table
                     .iter()
                     .filter_map(|(key, val)| {
-                        if key.name == name {
+                        if key.name == name && key.depth <= depth {
                             return Some((key.name.clone(), (*val).clone()));
                         }
                         None
@@ -186,27 +196,31 @@ impl TypeChecker {
 
                 if let Some(symbol) = symbols.get(&name) {
                     match symbol {
-                        SymbolType::Type(_) => todo!(),
                         SymbolType::Variable(variable) => match &variable.type_ {
-                            Some(type_) => return Ok((*type_).clone()),
+                            Some(type_) => Ok((*type_).clone()),
                             None => todo!(),
                         },
-                        SymbolType::Function(function) => todo!(),
+                        _ => {
+                            todo!()
+                        }
                     }
+                } else {
+                    Err(TypeErrors::VariableDoesntExist(name.to_string()))
                 }
-
-                todo!()
             }
-            Expression::Assignment(expression) => Ok(self.solve_expression_type(*expression)?),
-            Expression::Groupping(expression) => todo!(),
-            Expression::Unary(token, expression) => todo!(),
-            Expression::Binary(lhs_expr, token_kind, rhs_expr) => {
-                let lhs = self.solve_expression_type(*lhs_expr)?;
-                let rhs = self.solve_expression_type(*rhs_expr)?;
+            Expression::Assignment(expression) => {
+                Ok(self.solve_expression_type(*expression, depth)?)
+            }
+            Expression::Groupping(expression) => self.solve_expression_type(*expression, depth),
+            Expression::Unary(_, expression) => self.solve_expression_type(*expression, depth), //todo:
+            //check if operation is supported
+            Expression::Binary(lhs_expr, _, rhs_expr) => {
+                let lhs = self.solve_expression_type(*lhs_expr, depth)?;
+                let rhs = self.solve_expression_type(*rhs_expr, depth)?;
                 if lhs == rhs {
                     Ok(lhs)
                 } else {
-                    Err(TypeErrors::TypeNotFound("??".to_string())) //todo: add proper error
+                    Err(TypeErrors::OperationIsNotSupported()) //todo: add proper error
                 }
             }
         }
@@ -235,7 +249,8 @@ impl TypeChecker {
     ) -> Result<(), TypeErrors> {
         if self
             .symbol_table
-            .contains_key(&Key::new(name.to_string(), depth))
+            .iter()
+            .any(|(key, _)| key.name == name.to_string() && key.depth > depth)
         {
             return Err(TypeErrors::TypeAlreadyExists());
         }
@@ -252,15 +267,17 @@ impl TypeChecker {
         is_const: bool,
         mutable: bool,
         type_: Option<Type>,
+        depth: u16,
     ) -> Result<(), TypeErrors> {
         if self
             .symbol_table
-            .contains_key(&Key::new(name.to_string(), 0))
+            .iter()
+            .any(|(key, _)| key.name == name.to_string() && key.depth > depth)
         {
             return Err(TypeErrors::VariableAlreadyExists());
         }
         self.symbol_table.insert(
-            Key::new(name.to_string(), 0),
+            Key::new(name.to_string(), depth),
             SymbolType::Variable(Variable::new(name, is_const, mutable, type_)),
         );
         Ok(())
