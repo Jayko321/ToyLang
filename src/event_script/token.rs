@@ -63,6 +63,7 @@ pub enum TokenKind {
 
     // Reserved Keywords
     Let,
+    Mut,
     Const,
     Struct,
     Import,
@@ -83,6 +84,7 @@ impl TokenKind {
     pub fn is_keyword(input: &str) -> Option<TokenKind> {
         match input {
             "let" => Some(TokenKind::Let),
+            "mut" => Some(TokenKind::Mut),
             "const" => Some(TokenKind::Const),
             "struct" => Some(TokenKind::Struct),
             "import" => Some(TokenKind::Import),

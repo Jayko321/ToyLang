@@ -124,7 +124,7 @@ impl TypeChecker {
                 }
                 Ok(())
             }
-            Statement::Variable(name, is_const, explicit_type, expression) => {
+            Statement::Variable(name, is_const, is_mutable, explicit_type, expression) => {
                 let mut _type = None;
                 if let Some(type_name) = explicit_type {
                     if let Some(symbol) = self.symbol_table.get(&Key::new(name.clone(), depth)) {
@@ -144,7 +144,7 @@ impl TypeChecker {
                 if let Some(expr) = expression {
                     _type = Some(self.solve_expression_type(expr, depth)?);
                 }
-                self.add_variable(name, is_const, true, _type, depth)?;
+                self.add_variable(name, is_const, is_mutable, _type, depth)?;
                 Ok(())
             }
             _ => Ok(()),

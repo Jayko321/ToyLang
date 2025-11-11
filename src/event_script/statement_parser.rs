@@ -25,7 +25,20 @@ impl Parser {
             }
         };
 
-        let name_token = self.expect_token(TokenKind::Identifier)?;
+        let mut is_mutable = false;
+        let possible_name = self.expect_any_token(vec![TokenKind::Identifier, TokenKind::Mut])?;
+
+        let name_token = match possible_name.kind {
+            TokenKind::Mut => {
+                if is_const {
+                    return Err(ParserErrors::UnexpectedTokenKind(possible_name));
+                }
+                is_mutable = true;
+                self.expect_token(TokenKind::Identifier)?
+            }
+            TokenKind::Identifier => possible_name,
+            _ => return Err(ParserErrors::UnexpectedTokenKind(possible_name)),
+        };
         //let after_name = self.next_token()?;
         let has_explicit_type = match self.current_token().kind {
             TokenKind::Colon => true,
@@ -63,6 +76,7 @@ impl Parser {
         Ok(Statement::Variable(
             name_token.value,
             is_const,
+            is_mutable,
             explicit_type_val,
             expr,
         ))

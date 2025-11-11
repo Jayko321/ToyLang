@@ -16,5 +16,5 @@ pub enum Expression {
 pub enum Statement {
     Expression(Expression),
     Block(Vec<Statement>),
-    Variable(String, bool, Option<String>, Option<Expression>),
+    Variable(String, bool, bool, Option<String>, Option<Expression>),
 }
