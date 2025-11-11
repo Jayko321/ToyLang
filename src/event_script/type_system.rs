@@ -24,7 +24,8 @@ pub struct Variable {
 }
 
 impl Variable {
-    fn new<S: ToString>(name: S, is_const: bool, mutable: bool, type_: Option<Type>) -> Self {
+    #[must_use]
+    fn new<S: ToString>(name: &S, is_const: bool, mutable: bool, type_: Option<Type>) -> Self {
         Self {
             name: name.to_string(),
             is_const,
@@ -49,7 +50,7 @@ pub struct Key {
 }
 
 impl Key {
-    pub fn new<S: ToString>(name: S, depth: u16) -> Self {
+    pub fn new<S: ToString>(name: &S, depth: u16) -> Self {
         Self {
             name: name.to_string(),
             depth,
@@ -73,7 +74,7 @@ pub enum TypeErrors {
 }
 
 impl Type {
-    pub fn new<S: ToString>(name: S, size: usize) -> Self {
+    pub fn new<S: ToString>(name: &S, size: usize) -> Self {
         Type {
             name: name.to_string(),
             size,
@@ -81,7 +82,7 @@ impl Type {
     }
 
     fn clone(&self) -> Type {
-        Type::new(self.name.clone(), self.size)
+        Type::new(&self.name, self.size)
     }
 }
 
@@ -95,6 +96,11 @@ impl TypeChecker {
         res
     }
 
+    /// .
+    ///
+    /// # Errors
+    ///
+    /// This function will return an error if .
     pub fn check(statements: Vec<Statement>) -> Result<(), TypeErrors> {
         let mut checker = TypeChecker::new();
         for stmt in statements {
@@ -125,11 +131,11 @@ impl TypeChecker {
                 Ok(())
             }
             Statement::Variable(name, is_const, is_mutable, explicit_type, expression) => {
-                let mut _type = None;
+                let mut var_type = None;
                 if let Some(type_name) = explicit_type {
-                    if let Some(symbol) = self.symbol_table.get(&Key::new(name.clone(), depth)) {
+                    if let Some(symbol) = self.symbol_table.get(&Key::new(&name, depth)) {
                         match symbol {
-                            SymbolType::Type(known_type) => _type = Some((*known_type).clone()),
+                            SymbolType::Type(known_type) => var_type = Some((*known_type).clone()),
                             _ => {
                                 return Err(TypeErrors::SymbolIsNotAType(
                                     type_name.clone(),
@@ -142,9 +148,9 @@ impl TypeChecker {
                     }
                 }
                 if let Some(expr) = expression {
-                    _type = Some(self.solve_expression_type(expr, depth)?);
+                    var_type = Some(self.solve_expression_type(expr, depth)?);
                 }
-                self.add_variable(name, is_const, is_mutable, _type, depth)?;
+                self.add_variable(&name, is_const, is_mutable, var_type, depth)?;
                 Ok(())
             }
             _ => Ok(()),
@@ -160,25 +166,25 @@ impl TypeChecker {
             Expression::String(_) => todo!(),
             Expression::Number(value) => {
                 if value.parse::<i8>().is_ok() {
-                    return Ok(Type::new("i8", 8));
+                    return Ok(Type::new(&"i8", 8));
                 }
                 if value.parse::<i16>().is_ok() {
-                    return Ok(Type::new("i16", 16));
+                    return Ok(Type::new(&"i16", 16));
                 }
                 if value.parse::<i32>().is_ok() {
-                    return Ok(Type::new("i32", 32));
+                    return Ok(Type::new(&"i32", 32));
                 }
                 if value.parse::<i64>().is_ok() {
-                    return Ok(Type::new("i64", 64));
+                    return Ok(Type::new(&"i64", 64));
                 }
                 Err(TypeErrors::TypeNotFound("i?".to_string())) // todo: make proper error
             }
             Expression::Float(value) => {
                 if value.parse::<f32>().is_ok() {
-                    return Ok(Type::new("f32", 32));
+                    return Ok(Type::new(&"f32", 32));
                 }
                 if value.parse::<f64>().is_ok() {
-                    return Ok(Type::new("f64", 64));
+                    return Ok(Type::new(&"f64", 64));
                 }
                 Err(TypeErrors::TypeNotFound("f?".to_string())) // todo: make proper error
             }
@@ -205,7 +211,7 @@ impl TypeChecker {
                         }
                     }
                 } else {
-                    Err(TypeErrors::VariableDoesntExist(name.to_string()))
+                    Err(TypeErrors::VariableDoesntExist(name.clone()))
                 }
             }
             Expression::Assignment(expression) => {
@@ -227,23 +233,28 @@ impl TypeChecker {
     }
 
     pub(super) fn initialize(&mut self) {
-        self.add_type("i8", 8, 0).unwrap();
-        self.add_type("i16", 16, 0).unwrap();
-        self.add_type("i32", 32, 0).unwrap();
-        self.add_type("i64", 64, 0).unwrap();
+        self.add_type(&"i8", 8, 0).unwrap();
+        self.add_type(&"i16", 16, 0).unwrap();
+        self.add_type(&"i32", 32, 0).unwrap();
+        self.add_type(&"i64", 64, 0).unwrap();
 
-        self.add_type("u8", 8, 0).unwrap();
-        self.add_type("u16", 16, 0).unwrap();
-        self.add_type("u32", 32, 0).unwrap();
-        self.add_type("u64", 64, 0).unwrap();
+        self.add_type(&"u8", 8, 0).unwrap();
+        self.add_type(&"u16", 16, 0).unwrap();
+        self.add_type(&"u32", 32, 0).unwrap();
+        self.add_type(&"u64", 64, 0).unwrap();
 
-        self.add_type("f32", 32, 0).unwrap();
-        self.add_type("f64", 64, 0).unwrap();
+        self.add_type(&"f32", 32, 0).unwrap();
+        self.add_type(&"f64", 64, 0).unwrap();
     }
 
+    /// .
+    ///
+    /// # Errors
+    ///
+    /// This function will return an error if .
     pub fn add_type<S: ToString>(
         &mut self,
-        name: S,
+        name: &S,
         size: usize,
         depth: u16,
     ) -> Result<(), TypeErrors> {
@@ -255,15 +266,20 @@ impl TypeChecker {
             return Err(TypeErrors::TypeAlreadyExists());
         }
         self.symbol_table.insert(
-            Key::new(name.to_string(), depth),
+            Key::new(name, depth),
             SymbolType::Type(Type::new(name, size)),
         );
         Ok(())
     }
 
+    /// .
+    ///
+    /// # Errors
+    ///
+    /// This function will return an error if .
     pub fn add_variable<S: ToString>(
         &mut self,
-        name: S,
+        name: &S,
         is_const: bool,
         mutable: bool,
         type_: Option<Type>,
@@ -277,7 +293,7 @@ impl TypeChecker {
             return Err(TypeErrors::VariableAlreadyExists());
         }
         self.symbol_table.insert(
-            Key::new(name.to_string(), depth),
+            Key::new(name, depth),
             SymbolType::Variable(Variable::new(name, is_const, mutable, type_)),
         );
         Ok(())

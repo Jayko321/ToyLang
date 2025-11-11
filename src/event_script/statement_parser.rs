@@ -1,16 +1,16 @@
-use super::parser::*;
-use super::token::*;
-use crate::event_script::ast::*;
+use super::parser::{Parser, ParserErrors};
+use super::token::TokenKind;
+use crate::event_script::ast::Statement;
 
 impl Parser {
     pub(super) fn parse_block_statement(&mut self) -> Result<Statement, ParserErrors> {
-        self.expect_token(TokenKind::OpenCurly)?;
+        self.expect_token(&TokenKind::OpenCurly)?;
         let mut statements = Vec::new();
         while self.current_token().kind != TokenKind::CloseCurly {
             statements.push(self.parse_statement()?);
         }
 
-        self.expect_token(TokenKind::CloseCurly)?;
+        self.expect_token(&TokenKind::CloseCurly)?;
 
         Ok(Statement::Block(statements))
     }
@@ -26,7 +26,8 @@ impl Parser {
         };
 
         let mut is_mutable = false;
-        let possible_name = self.expect_any_token(vec![TokenKind::Identifier, TokenKind::Mut])?;
+        let possible_name =
+            self.expect_any_token(&vec![&TokenKind::Identifier, &TokenKind::Mut])?;
 
         let name_token = match possible_name.kind {
             TokenKind::Mut => {
@@ -34,7 +35,7 @@ impl Parser {
                     return Err(ParserErrors::UnexpectedTokenKind(possible_name));
                 }
                 is_mutable = true;
-                self.expect_token(TokenKind::Identifier)?
+                self.expect_token(&TokenKind::Identifier)?
             }
             TokenKind::Identifier => possible_name,
             _ => return Err(ParserErrors::UnexpectedTokenKind(possible_name)),
@@ -51,7 +52,7 @@ impl Parser {
         };
         let mut explicit_type_val = None;
         if has_explicit_type {
-            self.expect_token(TokenKind::Colon)?;
+            self.expect_token(&TokenKind::Colon)?;
             let explicit_type = self.next_token()?;
             if explicit_type.kind != TokenKind::Identifier {
                 return Err(ParserErrors::UnexpectedTokenKind(explicit_type));
@@ -60,12 +61,12 @@ impl Parser {
             //self.expect_token(TokenKind::Assignment)?;
         }
 
-        let token = self.expect_any_token(vec![TokenKind::Assignment, TokenKind::SemiColon])?;
+        let token = self.expect_any_token(&vec![&TokenKind::Assignment, &TokenKind::SemiColon])?;
         let mut expr = None;
         match token.kind {
             TokenKind::Assignment => {
                 expr = Some(self.parse_expression(0)?);
-                self.expect_token(TokenKind::SemiColon)?;
+                self.expect_token(&TokenKind::SemiColon)?;
             }
             TokenKind::SemiColon => {}
             _ => {

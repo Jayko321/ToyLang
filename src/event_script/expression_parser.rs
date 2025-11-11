@@ -1,11 +1,11 @@
-use super::parser::*;
-use super::token::*;
-use crate::event_script::ast::*;
+use super::parser::{Parser, ParserErrors};
+use super::token::TokenKind;
+use crate::event_script::ast::Expression;
 
 impl Parser {
     pub(super) fn parse_unary_expression(&mut self) -> Result<Expression, ParserErrors> {
+        use super::token::TokenKind::{Minus, Not};
         let operator = self.next_token()?;
-        use super::token::TokenKind::*;
         match operator.kind {
             Minus | Not => {}
             _ => return Err(ParserErrors::UnexpectedTokenKind(operator)),
@@ -16,9 +16,9 @@ impl Parser {
     }
 
     pub(super) fn parse_groupping_expression(&mut self) -> Result<Expression, ParserErrors> {
-        self.expect_token(TokenKind::OpenParen)?;
+        self.expect_token(&TokenKind::OpenParen)?;
         let inner = self.parse_expression(0)?;
-        self.expect_token(TokenKind::CloseParen)?;
+        self.expect_token(&TokenKind::CloseParen)?;
 
         Ok(Expression::Groupping(Box::new(inner)))
     }
@@ -39,7 +39,7 @@ impl Parser {
     }
 
     pub(super) fn parse_primary_expression(&mut self) -> Result<Expression, ParserErrors> {
-        use super::token::TokenKind::*;
+        use super::token::TokenKind::{Identifier, Number, String};
         let next_token = self.next_token()?;
         match next_token.kind {
             Number => Ok(Expression::Number(next_token.value)),

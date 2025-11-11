@@ -81,6 +81,7 @@ pub enum TokenKind {
 }
 
 impl TokenKind {
+    #[must_use]
     pub fn is_keyword(input: &str) -> Option<TokenKind> {
         match input {
             "let" => Some(TokenKind::Let),
@@ -103,8 +104,12 @@ impl TokenKind {
         }
     }
 
+    #[must_use]
     pub fn get_binding_power(&self) -> u8 {
-        use TokenKind::*;
+        use TokenKind::{
+            And, Assignment, DotDot, Equals, Greater, GreaterEquals, Less, LessEquals, Minus,
+            NotEquals, OpenParen, Or, Percent, Plus, Slash, Star,
+        };
         match self {
             Assignment => 2,
             And | Or | DotDot => 3,
@@ -127,7 +132,8 @@ pub struct Token {
 }
 
 impl Token {
-    pub fn new(kind: TokenKind, value: String, line: usize, pos: usize) -> Token {
+    #[must_use]
+    pub fn new(kind: &TokenKind, value: String, line: usize, pos: usize) -> Token {
         Token {
             kind: kind.clone(),
             value,

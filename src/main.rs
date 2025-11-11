@@ -1,3 +1,6 @@
+#![warn(clippy::pedantic)]
+#![allow(clippy::match_wildcard_for_single_variants)]
+#![allow(clippy::match_same_arms)]
 use crate::event_script::{parser::Parser, tokenizer::Lexer, type_system::TypeChecker};
 
 pub mod event_script;
@@ -9,5 +12,5 @@ fn main() {
     let stmt = Parser::parse(tokens);
     // println!("{:?}", stmt);
     let res = TypeChecker::check(stmt.unwrap());
-    println!("{:?}", res);
+    println!("{res:?}");
 }

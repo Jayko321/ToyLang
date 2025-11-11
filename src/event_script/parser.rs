@@ -56,6 +56,11 @@ impl Parser {
         res
     }
 
+    /// .
+    ///
+    /// # Errors
+    ///
+    /// This function will return an error if .
     pub fn parse(tokens: Vec<Token>) -> Result<Vec<Statement>, ParserErrors> {
         let mut parser = Parser::new(tokens.into());
         let mut body: Vec<Statement> = Vec::new();
@@ -70,10 +75,15 @@ impl Parser {
         self.current_token().kind != TokenKind::Eof
     }
 
-    fn try_parse_null_denotaion(&mut self, kind: TokenKind) -> Result<Expression, ParserErrors> {
+    /// .
+    ///
+    /// # Errors
+    ///
+    /// This function will return an error if .
+    fn try_parse_null_denotaion(&mut self, kind: &TokenKind) -> Result<Expression, ParserErrors> {
         let handler_type =
             self.null_denotation_lookup
-                .get(&kind)
+                .get(kind)
                 .ok_or(ParserErrors::NoFunctionHandler(
                     self.current_token().clone(),
                 ))?;
@@ -89,11 +99,14 @@ impl Parser {
         &mut self,
         left: Expression,
         new_power: u8,
-        kind: TokenKind,
+        kind: &TokenKind,
     ) -> Result<Expression, ParserErrors> {
-        let function_type = self.left_denotation_lookup.get(&kind).ok_or(
-            ParserErrors::UnexpectedExpressionType(self.current_token().clone()),
-        )?;
+        let function_type =
+            self.left_denotation_lookup
+                .get(kind)
+                .ok_or(ParserErrors::UnexpectedExpressionType(
+                    self.current_token().clone(),
+                ))?;
 
         match function_type {
             LeftDenotationHandlerTypes::Default => self.parse_binary_expression(left, new_power),
@@ -109,13 +122,13 @@ impl Parser {
     ) -> Result<Expression, ParserErrors> {
         let mut kind = self.current_token().kind.clone();
 
-        let mut left = self.try_parse_null_denotaion(kind.clone())?;
+        let mut left = self.try_parse_null_denotaion(&kind)?;
 
         while self.current_token().binding_power > binding_power {
             kind = self.current_token().kind.clone();
 
             let new_power = self.current_token().binding_power;
-            left = self.try_parse_left_denotation(left, new_power, kind)?;
+            left = self.try_parse_left_denotation(left, new_power, &kind)?;
         }
 
         Ok(left)
@@ -132,27 +145,28 @@ impl Parser {
         }
 
         let expression = self.parse_expression(0)?;
-        self.expect_token(TokenKind::SemiColon)?;
+        self.expect_token(&TokenKind::SemiColon)?;
 
         Ok(Statement::Expression(expression))
     }
 
     pub(super) fn expect_any_token(
         &mut self,
-        kinds: Vec<TokenKind>,
+        kinds: &Vec<&TokenKind>,
     ) -> Result<Token, ParserErrors> {
-        let is_correct = kinds.iter().any(|val| *val == self.current_token().kind);
+        let is_correct = kinds.iter().any(|val| **val == self.current_token().kind);
 
-        match is_correct {
-            true => Ok(self.next_token()?),
-            false => Err(ParserErrors::UnexpectedTokenKind(
+        if is_correct {
+            Ok(self.next_token()?)
+        } else {
+            Err(ParserErrors::UnexpectedTokenKind(
                 self.current_token().clone(),
-            )),
+            ))
         }
     }
 
-    pub(super) fn expect_token(&mut self, kind: TokenKind) -> Result<Token, ParserErrors> {
-        if kind != self.current_token().kind {
+    pub(super) fn expect_token(&mut self, kind: &TokenKind) -> Result<Token, ParserErrors> {
+        if *kind != self.current_token().kind {
             return Err(ParserErrors::UnexpectedTokenKind(
                 self.current_token().clone(),
             ));
@@ -173,7 +187,11 @@ impl Parser {
     }
 
     fn initialize(&mut self) {
-        use super::token::TokenKind::*;
+        use super::token::TokenKind::{
+            And, Const, DotDot, Equals, Greater, GreaterEquals, Identifier, Less, LessEquals, Let,
+            Minus, Not, NotEquals, Number, OpenCurly, OpenParen, Or, Percent, Plus, Slash, Star,
+            String,
+        };
 
         let mut add_new = |kind: TokenKind, h_type: LeftDenotationHandlerTypes| {
             self.left_denotation_lookup.insert(kind, h_type);

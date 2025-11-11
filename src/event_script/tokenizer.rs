@@ -1,7 +1,7 @@
 use std::fmt::Display;
 use std::ops::Deref;
 
-use crate::event_script::token::*;
+use crate::event_script::token::{Token, TokenKind};
 use lazy_regex::{Regex, regex};
 
 pub struct Lexer {
@@ -19,6 +19,7 @@ pub struct RegexPattern {
 }
 
 impl RegexPattern {
+    #[must_use]
     pub fn new(regex: Regex, handler: Box<HandlerType>) -> Self {
         RegexPattern { regex, handler }
     }
@@ -31,7 +32,7 @@ pub enum TokenizerError {
 
 impl Display for TokenizerError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}", self)
+        write!(f, "{self:?}")
     }
 }
 
@@ -41,7 +42,7 @@ fn default_handler(kind: TokenKind, value: &'static str) -> Box<HandlerType> {
     let res = move |_: &Regex, _: &str, line: usize, pos: usize| -> (usize, Option<Token>) {
         (
             value.len(),
-            Some(Token::new(kind.clone(), value.to_string(), line, pos)),
+            Some(Token::new(&kind, value.to_string(), line, pos)),
         )
     };
     Box::new(res)
@@ -65,7 +66,7 @@ fn string_handler(
         return (
             str_value.len() + 2,
             Some(Token::new(
-                TokenKind::String,
+                &TokenKind::String,
                 str_value.to_string(),
                 line,
                 pos,
@@ -86,7 +87,7 @@ fn number_handler(
         return (
             num_value.len(),
             Some(Token::new(
-                TokenKind::Number,
+                &TokenKind::Number,
                 String::from(num_value),
                 line,
                 pos,
@@ -107,26 +108,31 @@ fn symbol_handler(
         if let Some(keyword) = TokenKind::is_keyword(value) {
             return (
                 value.len(),
-                Some(Token::new(keyword, value.to_string(), line, pos)),
-            );
-        } else {
-            return (
-                value.len(),
-                Some(Token::new(
-                    TokenKind::Identifier,
-                    String::from(value),
-                    line,
-                    pos,
-                )),
+                Some(Token::new(&keyword, value.to_string(), line, pos)),
             );
         }
+        return (
+            value.len(),
+            Some(Token::new(
+                &TokenKind::Identifier,
+                String::from(value),
+                line,
+                pos,
+            )),
+        );
     }
     (0, None)
 }
 
 impl Lexer {
     fn new(source: String) -> Self {
-        use crate::event_script::token::TokenKind::*;
+        use crate::event_script::token::TokenKind::{
+            And, Assignment, CloseBracket, CloseCurly, CloseParen, Colon, Comma, DivideEquals, Dot,
+            DotDot, DoubleColon, Equals, Greater, GreaterEquals, Less, LessEquals, Minus,
+            MinusEquals, MinusMinus, ModEquals, MultiplyEquals, Not, NotEquals, OpenBracket,
+            OpenCurly, OpenParen, Or, Percent, Pipe, Plus, PlusEquals, PlusPlus, Question,
+            SemiColon, Slash, Star,
+        };
 
         #[rustfmt::skip]
         let patterns = vec![
@@ -196,13 +202,18 @@ impl Lexer {
         self.pos >= self.input.len()
     }
 
+    /// .
+    ///
+    /// # Errors
+    ///
+    /// This function will return an error if .
     pub fn tokenize(source: String) -> Result<Vec<Token>, TokenizerError> {
         let mut lexer = Lexer::new(source);
 
         while !lexer.at_eof() {
             let mut matched = false;
 
-            let remainder = lexer.remainder().to_owned();
+            let remainder = lexer.remainder().clone();
             let mut advance = 0;
             let mut token = None;
             for pattern in &mut lexer.patterns {
@@ -231,7 +242,7 @@ impl Lexer {
 
         lexer
             .tokens
-            .push(Token::new(TokenKind::Eof, "".to_string(), lexer.pos, 0));
+            .push(Token::new(&TokenKind::Eof, String::new(), lexer.pos, 0));
 
         Ok(lexer.tokens)
     }
