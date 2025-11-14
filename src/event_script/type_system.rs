@@ -4,7 +4,7 @@ use crate::event_script::ast::{Expression, Statement};
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Type {
-    name: String,
+    pub(crate) name: String,
     size: usize,
 }
 
@@ -17,7 +17,7 @@ pub struct Function {
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Variable {
-    name: String,
+    pub(crate) name: String,
     is_const: bool,
     mutable: bool,
     type_: Option<Type>,
@@ -60,8 +60,8 @@ impl Key {
 
 pub struct TypeChecker {
     symbol_table: HashMap<Key, SymbolType>,
-    // symbol_table:
 }
+
 #[derive(Debug)]
 pub enum TypeErrors {
     TypeAlreadyExists(),
@@ -73,16 +73,32 @@ pub enum TypeErrors {
     SymbolIsNotAType(String, String),
 }
 
+#[derive(Debug, Clone)]
+pub enum Operations {
+    //Math
+    Addition,
+    Subtraction,
+    Multiplication,
+    Division,
+    //Logical
+    Not,
+    And,
+    Or,
+    //Comparison
+    Great,
+    GreatEquals,
+    Less,
+    LessEquals,
+    Equals,
+    NotEquals,
+}
+
 impl Type {
     pub fn new<S: ToString>(name: &S, size: usize) -> Self {
         Type {
             name: name.to_string(),
             size,
         }
-    }
-
-    fn clone(&self) -> Type {
-        Type::new(&self.name, self.size)
     }
 }
 
