@@ -18,7 +18,9 @@ fn main() {
     // println!("{:?}", stmt);
     // let res = TypeChecker::check(stmt.unwrap());
     let mut table = SymbolTable::new();
-    table.insert_symbol(SymbolType::Type(Type::new(&"a", 8)), 2);
-    table.insert_symbol(SymbolType::Type(Type::new(&"a", 8)), 1);
+    table.insert(SymbolType::Type(Type::new(&"a", 8)), 1, "a");
+    table.insert(SymbolType::Type(Type::new(&"a", 8)), 1, "b");
     println!("{table:?}");
+    println!("{:?}", table.get_type(&String::from("a"), 1, "a"));
+    println!("{:?}", table.get_type(&String::from("a"), 1, "a"));
 }

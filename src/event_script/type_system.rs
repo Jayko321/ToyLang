@@ -2,20 +2,20 @@ use std::collections::HashMap;
 
 use crate::event_script::ast::{Expression, Statement};
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone, Default)]
 pub struct Type {
     pub(crate) name: String,
     size: usize,
 }
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone, Default)]
 pub struct Function {
     name: String,
     return_type: Type,
     params: Vec<Type>,
 }
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone, Default)]
 pub struct Variable {
     pub(crate) name: String,
     is_const: bool,
