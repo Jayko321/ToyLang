@@ -136,6 +136,9 @@ impl Lexer {
 
         #[rustfmt::skip]
         let patterns = vec![
+            // Skip these before matching any tokens
+            RegexPattern::new(regex!(r#"\s+"#).deref().to_owned(), Box::new(skip_handler)),
+            RegexPattern::new(regex!(r#"\/\/.*"#).deref().to_owned(), Box::new(skip_handler)),
             //Grouping
             RegexPattern::new(regex!(r#"\|"#).deref().to_owned(), default_handler(Pipe, "|")),
             RegexPattern::new(regex!(r#"\["#).deref().to_owned(), default_handler(OpenBracket, "[")),
@@ -180,8 +183,6 @@ impl Lexer {
             RegexPattern::new(regex!(r#"\*"#).deref().to_owned(), default_handler(Star, "*")),
             RegexPattern::new(regex!(r#"%"#).deref().to_owned(), default_handler(Percent, "%")),
             //Special cases
-            RegexPattern::new(regex!(r#"\s+"#).deref().to_owned(), Box::new(skip_handler)),
-            RegexPattern::new(regex!(r#"\/\/.*"#).deref().to_owned(), Box::new(skip_handler)),
             RegexPattern::new(regex!(r#""[^"]*""#).deref().to_owned(), Box::new(string_handler)),
             RegexPattern::new(regex!(r#"[0-9]+(\.[0-9]+)?"#).deref().to_owned(), Box::new(number_handler)),
             RegexPattern::new(regex!(r#"[a-zA-Z_][a-zA-Z0-9_!]*"#).deref().to_owned(), Box::new(symbol_handler)),
